@@ -28,17 +28,6 @@ export default function Layout({ children }) {
               <MessageSquare className="w-5 h-5" />
               <span>Chat Assistant</span>
             </Link>
-
-            <Link
-              to="/dashboard"
-              className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${location.pathname === '/dashboard'
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-                }`}
-            >
-              <BarChart3 className="w-5 h-5" />
-              <span>Dashboard</span>
-            </Link>
           </div>
         </nav>
 
