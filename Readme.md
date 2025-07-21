@@ -64,23 +64,6 @@ A smart financial management system that allows users to manage invoices and tra
 
    This starts both frontend (http://localhost:3000) and backend (http://localhost:5000)
 
-## Usage Examples
-
-### Creating Invoices
-- "Create an invoice for John Doe for $500"
-- "Send invoice to jane@company.com for $1,200 for web development"
-- "Bill ABC Corp $2,500 for consulting services due in 30 days"
-
-### Recording Transactions
-- "Record expense of $50 for office supplies"
-- "Add income of $1,000 from client payment"
-- "Log $200 travel expense for business trip"
-
-### Balance Sheets
-- "Show me my balance sheet"
-- "What's my current financial status?"
-- "Generate financial report"
-
 ## API Endpoints
 
 ### Authentication
