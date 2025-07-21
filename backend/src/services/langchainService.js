@@ -16,6 +16,27 @@ const model = new ChatGoogleGenerativeAI({
   verbose: false
 });
 
+function parseGeminiResponse(response) {
+  try {
+    // Remove markdown code blocks if present
+    let cleanedResponse = response.trim();
+    
+    // Remove ```json and ``` markers
+    if (cleanedResponse.startsWith('```json')) {
+      cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (cleanedResponse.startsWith('```')) {
+      cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
+    // Parse the cleaned JSON
+    return JSON.parse(cleanedResponse.trim());
+  } catch (error) {
+    logger.error('JSON parsing error:', error.message);
+    logger.error('Raw response:', response);
+    throw new Error(`Failed to parse AI response as JSON: ${error.message}`);
+  }
+}
+
 // Test model connection on startup
 async function testModelConnection() {
   try {
@@ -187,7 +208,7 @@ async function detectIntent(message, userId, conversationId = 'default') {
     logger.info(`Raw intent response: ${response}`);
 
     // Parse JSON response
-    const parsed = JSON.parse(response);
+    const parsed = parseGeminiResponse(response);
 
     // Validate response structure
     if (!parsed.intent || !parsed.confidence || !parsed.entities) {
