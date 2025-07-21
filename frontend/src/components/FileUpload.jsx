@@ -64,9 +64,10 @@ export default function FileUpload({ onUploadSuccess, onUploadError }) {
         throw new Error('File size must be less than 10MB');
       }
 
-      // Validate file type (PDF only)
-      if (file.type !== 'application/pdf') {
-        throw new Error('Only PDF files are allowed.');
+      // Validate file type
+      const supportedTypes = ['application/pdf', 'text/plain'];
+      if (!supportedTypes.includes(file.type)) {
+        throw new Error('Unsupported file type. Please upload PDF/text files.');
       }
 
       const formData = new FormData();
@@ -131,7 +132,7 @@ export default function FileUpload({ onUploadSuccess, onUploadError }) {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf"
+            accept=".pdf,.txt"
             onChange={handleFileSelect}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             disabled={uploading}
