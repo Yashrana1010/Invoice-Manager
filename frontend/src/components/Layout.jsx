@@ -45,7 +45,7 @@ export default function Layout({ children }) {
         <div className="absolute bottom-6 left-6 right-6">
           <button
             onClick={logout}
-            className="flex items-center space-x-3 px-3 py-2 w-full text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+            className="flex items-center space-x-3 px-3 py-2  text-gray-600 hover:bg-red-500/30 hover:text-red-800 rounded-lg transition-colors"
           >
             <LogOut className="w-5 h-5" />
             <span>Logout</span>

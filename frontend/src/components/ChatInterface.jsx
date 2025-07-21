@@ -69,7 +69,7 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="flex flex-col h-full max-w-4xl mx-auto">
+    <div className="flex flex-col h-full max-w-6xl mx-auto">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <div
@@ -78,7 +78,7 @@ export default function ChatInterface() {
           >
             <div className="flex items-start space-x-2 max-w-xs md:max-w-md">
               {message.sender === 'bot' && (
-                <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
+                <div className="w-12 h-8 bg-primary-500 rounded-full flex items-center justify-center">
                   <Bot className="w-4 h-4 text-white" />
                 </div>
               )}
