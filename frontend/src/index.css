@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .chat-message {
+    @apply p-4 rounded-lg max-w-xs md:max-w-md;
+  }
+  
+  .chat-user {
+    @apply bg-primary-500 text-white ml-auto;
+  }
+  
+  .chat-bot {
+    @apply bg-gray-200 text-gray-800;
+  }
+  
+  .btn-primary {
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+  }
+  
+  .spinner {
+    @apply animate-spin rounded-full h-4 w-4 border-b-2 border-current;
+  }
+}

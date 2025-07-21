@@ -1,0 +1,20 @@
+{
+  "name": "ai-invoice-manager",
+  "version": "1.0.0",
+  "description": "AI-Powered Invoice & Balance Sheet Manager",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && npm start",
+    "setup": "npm install && cd frontend && npm install && cd ../backend && npm install"
+  },
+  "keywords": ["invoice", "ai", "finance", "chatbot"],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
