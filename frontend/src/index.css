@@ -22,4 +22,35 @@
   .spinner {
     @apply animate-spin rounded-full h-4 w-4 border-b-2 border-current;
   }
+
+  /* Modal backdrop blur */
+  .backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+  }
+  
+  /* Custom scrollbar for modal */
+  .modal-content::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .modal-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+  
+  .modal-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+  }
+  
+  .modal-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+}
+
+/* Ensure backdrop blur works on older browsers */
+@supports not (backdrop-filter: blur()) {
+  .backdrop-blur-sm {
+    background-color: rgba(0, 0, 0, 0.75);
+  }
 }
