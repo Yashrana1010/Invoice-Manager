@@ -5,6 +5,7 @@ const { authenticateToken } = require('../middleware/auth');
 const { parseDocument, validateFile } = require('../services/documentParsingService');
 const { extractInvoiceData } = require('../services/invoiceExtractionService');
 const { createInvoice } = require('../services/openBookService');
+const { setPendingExtractedData } = require('../services/langchainService');
 const logger = require('../utils/logger');
 
 const router = express.Router();
@@ -48,10 +49,10 @@ router.post('/invoice', authenticateToken, upload.single('document'), async (req
 
     // Parse the document
     const documentText = await parseDocument(req.file.path, req.file.mimetype);
-    
+
     if (!documentText || documentText.trim().length < 10) {
-      return res.status(400).json({ 
-        error: 'Could not extract readable text from the document' 
+      return res.status(400).json({
+        error: 'Could not extract readable text from the document'
       });
     }
 
@@ -89,7 +90,7 @@ router.post('/invoice', authenticateToken, upload.single('document'), async (req
     res.json(response);
   } catch (error) {
     logger.error('Upload processing error:', error);
-    
+
     // Clean up uploaded file on error
     if (req.file) {
       try {
@@ -100,9 +101,9 @@ router.post('/invoice', authenticateToken, upload.single('document'), async (req
       }
     }
 
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to process document',
-      details: error.message 
+      details: error.message
     });
   }
 });
@@ -115,13 +116,17 @@ router.post('/extract', authenticateToken, upload.single('document'), async (req
     }
 
     const userId = req.user.userId;
+    const conversationId = req.body.conversationId || 'default';
     logger.info(`Extracting data from: ${req.file.originalname} for user ${userId}`);
 
     // Parse the document
     const documentText = await parseDocument(req.file.path, req.file.mimetype);
-    
+
     // Extract data using AI
     const extractedData = await extractInvoiceData(documentText);
+
+    // Save extracted data to conversation context for follow-up chat
+    setPendingExtractedData(userId, conversationId, extractedData);
 
     res.json({
       message: 'Data extracted successfully',
@@ -133,7 +138,7 @@ router.post('/extract', authenticateToken, upload.single('document'), async (req
     });
   } catch (error) {
     logger.error('Extract processing error:', error);
-    
+
     if (req.file) {
       try {
         const fs = require('fs').promises;
@@ -143,9 +148,9 @@ router.post('/extract', authenticateToken, upload.single('document'), async (req
       }
     }
 
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to extract data from document',
-      details: error.message 
+      details: error.message
     });
   }
 });
@@ -161,31 +166,31 @@ router.get('/supported-types', (req, res) => {
 });
 
 function canAutoCreateInvoice(extractedData) {
-  return extractedData.clientName && 
-         extractedData.totalAmount && 
-         extractedData.totalAmount > 0 &&
-         extractedData.confidence > 0.6;
+  return extractedData.clientName &&
+    extractedData.totalAmount &&
+    extractedData.totalAmount > 0 &&
+    extractedData.confidence > 0.6;
 }
 
 function generateSuggestions(extractedData) {
   const suggestions = [];
-  
+
   if (!extractedData.clientName) {
     suggestions.push('Consider adding client name manually if not detected');
   }
-  
+
   if (!extractedData.totalAmount) {
     suggestions.push('Please verify the invoice amount was correctly extracted');
   }
-  
+
   if (!extractedData.invoiceDate) {
     suggestions.push('Consider adding the invoice date manually');
   }
-  
+
   if (extractedData.confidence < 0.7) {
     suggestions.push('Low confidence extraction - please review all fields carefully');
   }
-  
+
   if (extractedData.taxAmount && !extractedData.subtotal) {
     suggestions.push('Tax amount detected but no subtotal - please verify amounts');
   }

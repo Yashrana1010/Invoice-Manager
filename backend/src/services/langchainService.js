@@ -10,9 +10,9 @@ const model = new ChatGoogleGenerativeAI({
   modelName: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   apiKey: process.env.GOOGLE_API_KEY,
   temperature: 0.1,
-  maxOutputTokens: 1000,
+  maxOutputTokens: 2000, // Increased to prevent truncation
   // Additional configuration to avoid API version issues
-  streaming: true,
+  streaming: false, // Changed to false to prevent truncation issues
   verbose: false
 });
 
@@ -20,14 +20,14 @@ function parseGeminiResponse(response) {
   try {
     // Remove markdown code blocks if present
     let cleanedResponse = response.trim();
-    
+
     // Remove ```json and ``` markers
     if (cleanedResponse.startsWith('```json')) {
       cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
     } else if (cleanedResponse.startsWith('```')) {
       cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
-    
+
     // Parse the cleaned JSON
     return JSON.parse(cleanedResponse.trim());
   } catch (error) {
@@ -138,7 +138,7 @@ Analyze the provided invoice text and extract the following information:
 10. Vendor/Company Name
 11. Payment Terms
 
-IMPORTANT: Always respond with valid JSON in this exact format:
+IMPORTANT: Respond ONLY with valid JSON in this exact format (no extra text before or after):
 {{
   "invoiceNumber": "string or null",
   "invoiceDate": "YYYY-MM-DD or null", 
@@ -162,6 +162,7 @@ Important:
 - Extract only numeric values for amounts (no currency symbols)
 - Be accurate and conservative in extraction
 - Set confidence based on how clear the information is
+- Do NOT include any text outside the JSON response
 
 Invoice text to analyze:
 {documentText}
@@ -281,11 +282,67 @@ async function generateConversationalResponse(message, userId, conversationId = 
   }
 }
 
-// Invoice data extraction using LangChain (no fallback)
+// Improved JSON extraction function
+function extractValidJson(str) {
+  try {
+    // First, try to parse the entire string
+    return JSON.parse(str);
+  } catch (error) {
+    // If that fails, try to find and extract valid JSON
+    const trimmed = str.trim();
+
+    // Look for JSON object boundaries
+    const firstBrace = trimmed.indexOf('{');
+    if (firstBrace === -1) return null;
+
+    let braceCount = 0;
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = firstBrace; i < trimmed.length; i++) {
+      const char = trimmed[i];
+
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        escapeNext = true;
+        continue;
+      }
+
+      if (char === '"' && !escapeNext) {
+        inString = !inString;
+        continue;
+      }
+
+      if (!inString) {
+        if (char === '{') {
+          braceCount++;
+        } else if (char === '}') {
+          braceCount--;
+          if (braceCount === 0) {
+            // Found complete JSON object
+            const jsonStr = trimmed.substring(firstBrace, i + 1);
+            try {
+              return JSON.parse(jsonStr);
+            } catch (parseError) {
+              logger.error('Failed to parse extracted JSON:', parseError.message);
+              return null;
+            }
+          }
+        }
+      }
+    }
+
+    // If we reach here, no complete JSON was found
+    return null;
+  }
+}
+
+// Invoice data extraction using LangChain (improved)
 async function extractInvoiceDataWithLangChain(documentText) {
-
-  console.log ("vicky Kumar",documentText)
-
   try {
     logger.info('Starting LangChain-powered invoice data extraction');
 
@@ -293,7 +350,6 @@ async function extractInvoiceDataWithLangChain(documentText) {
       throw new Error('Document text is too short or empty');
     }
 
-    // Check if model connection is working
     if (modelConnectionWorking === false) {
       throw new Error('Gemini model is unavailable');
     }
@@ -304,10 +360,29 @@ async function extractInvoiceDataWithLangChain(documentText) {
 
     logger.info(`Raw extraction response: ${response}`);
 
-    // Parse JSON response
-    const extractedData = JSON.parse(response);
+    // Clean the response by removing markdown code blocks
+    let cleanedResponse = response.trim();
 
-    // Validate and clean data
+    // Remove triple backticks and language indicators
+    if (cleanedResponse.startsWith('```')) {
+      cleanedResponse = cleanedResponse.replace(/^```[a-zA-Z]*\s*/, '');
+      cleanedResponse = cleanedResponse.replace(/```$/, '');
+      cleanedResponse = cleanedResponse.trim();
+    }
+
+    // Try to extract valid JSON
+    const extractedData = extractValidJson(cleanedResponse);
+
+    if (!extractedData) {
+      logger.error('Failed to extract valid JSON from response');
+      throw new Error('Gemini did not return valid JSON. Raw response: ' + cleanedResponse);
+    }
+
+    // Validate that we have the expected structure
+    if (typeof extractedData !== 'object' || extractedData === null) {
+      throw new Error('Extracted data is not a valid object');
+    }
+
     const cleanedData = validateAndCleanExtractedData(extractedData);
 
     logger.info(`Successfully extracted invoice data with confidence: ${cleanedData.confidence}`);
@@ -353,6 +428,34 @@ function clearConversationMemory(userId, conversationId) {
   conversationMemory.delete(key);
 }
 
+// Pending extracted data management
+function setPendingExtractedData(userId, conversationId, data) {
+  const key = `${userId}-${conversationId}`;
+  const memory = conversationMemory.get(key) || [];
+  // Remove any previous pending extracted data
+  const filtered = memory.filter(item => item.type !== 'pending_extracted_data');
+  filtered.push({
+    type: 'pending_extracted_data',
+    data,
+    timestamp: new Date()
+  });
+  conversationMemory.set(key, filtered);
+}
+
+function getPendingExtractedData(userId, conversationId) {
+  const key = `${userId}-${conversationId}`;
+  const memory = conversationMemory.get(key) || [];
+  const pending = memory.find(item => item.type === 'pending_extracted_data');
+  return pending ? pending.data : null;
+}
+
+function clearPendingExtractedData(userId, conversationId) {
+  const key = `${userId}-${conversationId}`;
+  const memory = conversationMemory.get(key) || [];
+  const filtered = memory.filter(item => item.type !== 'pending_extracted_data');
+  conversationMemory.set(key, filtered);
+}
+
 // Validation and cleaning of extracted data
 function validateAndCleanExtractedData(data) {
   const cleaned = { ...data };
@@ -379,6 +482,11 @@ function validateAndCleanExtractedData(data) {
   // Set default currency
   if (!cleaned.currency) cleaned.currency = 'USD';
 
+  // Ensure extractedFields is an array
+  if (!Array.isArray(cleaned.extractedFields)) {
+    cleaned.extractedFields = [];
+  }
+
   return cleaned;
 }
 
@@ -399,5 +507,8 @@ module.exports = {
   clearConversationMemory,
   testModelConnection,
   isModelAvailable,
-  model
+  model,
+  setPendingExtractedData,
+  getPendingExtractedData,
+  clearPendingExtractedData
 };

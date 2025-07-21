@@ -1,4 +1,4 @@
-const { detectIntent, generateConversationalResponse } = require('./langchainService');
+const { detectIntent, generateConversationalResponse, getPendingExtractedData, clearPendingExtractedData } = require('./langchainService');
 const { extractFinancialData } = require('./extractionService');
 const { createInvoice, recordTransaction, generateBalanceSheet } = require('./openBookService');
 const logger = require('../utils/logger');
@@ -15,21 +15,39 @@ async function processMessage(message, userId, conversationId) {
   const extractedData = extractFinancialData(message);
 
   // Step 3: Merge AI entities with regex extraction (prioritize AI entities)
-  const mergedData = {
+  let mergedData = {
     ...extractedData,
     ...intent.entities
   };
 
+  // Step 4: If intent is CREATE_INVOICE or RECORD_TRANSACTION and required fields are missing,
+  // try to merge in pending extracted data from conversation context
+  if (
+    (intent.intent === 'CREATE_INVOICE' || intent.intent === 'RECORD_TRANSACTION') &&
+    (!mergedData.client || !mergedData.amount)
+  ) {
+    const pending = getPendingExtractedData(userId, conversationId || 'default');
+    if (pending) {
+      mergedData = {
+        ...pending,
+        ...mergedData // user message takes precedence if present
+      };
+    }
+  }
+
   logger.info(`Merged data: ${JSON.stringify(mergedData)}`);
 
-  // Step 4: Process based on intent
+  // Step 5: Process based on intent
   let response;
   switch (intent.intent) {
     case 'CREATE_INVOICE':
       response = await handleInvoiceCreation(mergedData, userId, message, conversationId);
+      // Clear pending extracted data after use
+      clearPendingExtractedData(userId, conversationId || 'default');
       break;
     case 'RECORD_TRANSACTION':
       response = await handleTransactionRecord(mergedData, userId, message, conversationId);
+      clearPendingExtractedData(userId, conversationId || 'default');
       break;
     case 'GENERATE_BALANCE_SHEET':
       response = await handleBalanceSheetGeneration(userId, conversationId);

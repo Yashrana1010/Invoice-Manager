@@ -15,7 +15,16 @@ export default function FileUpload({ onUploadSuccess, onUploadError }) {
 
     const files = e.dataTransfer.files;
     if (files && files[0]) {
-      handleFileUpload(files[0]);
+      // Only accept PDF files
+      if (files[0].type === 'application/pdf') {
+        handleFileUpload(files[0]);
+      } else {
+        setUploadResult({
+          success: false,
+          error: 'Only PDF files are allowed.',
+          fileName: files[0].name
+        });
+      }
     }
   };
 
@@ -32,7 +41,16 @@ export default function FileUpload({ onUploadSuccess, onUploadError }) {
   const handleFileSelect = (e) => {
     const files = e.target.files;
     if (files && files[0]) {
-      handleFileUpload(files[0]);
+      // Only accept PDF files
+      if (files[0].type === 'application/pdf') {
+        handleFileUpload(files[0]);
+      } else {
+        setUploadResult({
+          success: false,
+          error: 'Only PDF files are allowed.',
+          fileName: files[0].name
+        });
+      }
     }
   };
 
@@ -46,10 +64,9 @@ export default function FileUpload({ onUploadSuccess, onUploadError }) {
         throw new Error('File size must be less than 10MB');
       }
 
-      // Validate file type
-      const supportedTypes = ['application/pdf', 'text/plain', 'image/jpeg', 'image/png'];
-      if (!supportedTypes.includes(file.type)) {
-        throw new Error('Unsupported file type. Please upload PDF, TXT, JPG, or PNG files.');
+      // Validate file type (PDF only)
+      if (file.type !== 'application/pdf') {
+        throw new Error('Only PDF files are allowed.');
       }
 
       const formData = new FormData();
@@ -103,8 +120,8 @@ export default function FileUpload({ onUploadSuccess, onUploadError }) {
       {!uploadResult && (
         <div
           className={`relative border-2 border-dashed rounded-lg p-6 transition-colors ${dragActive
-              ? 'border-primary-500 bg-primary-50'
-              : 'border-gray-300 hover:border-gray-400'
+            ? 'border-primary-500 bg-primary-50'
+            : 'border-gray-300 hover:border-gray-400'
             } ${uploading ? 'pointer-events-none opacity-50' : ''}`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -114,7 +131,7 @@ export default function FileUpload({ onUploadSuccess, onUploadError }) {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.txt,.jpg,.jpeg,.png"
+            accept=".pdf"
             onChange={handleFileSelect}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             disabled={uploading}
@@ -131,17 +148,17 @@ export default function FileUpload({ onUploadSuccess, onUploadError }) {
               <>
                 <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-lg font-medium text-gray-700 mb-2">
-                  Drop your invoice here or click to browse
+                  Drop your PDF invoice here or click to browse
                 </p>
                 <p className="text-sm text-gray-500 mb-4">
-                  Supported formats: PDF, TXT, JPG, PNG (max 10MB)
+                  Supported format: PDF only (max 10MB)
                 </p>
                 <button
                   type="button"
                   className="btn-primary"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  Choose File
+                  Choose PDF File
                 </button>
               </>
             )}
@@ -203,7 +220,7 @@ export default function FileUpload({ onUploadSuccess, onUploadError }) {
       )}
 
       <div className="mt-4 text-xs text-gray-500 text-center">
-        <p>AI will automatically extract invoice details from your document</p>
+        <p>AI will automatically extract invoice details from your PDF document</p>
       </div>
     </div>
   );
