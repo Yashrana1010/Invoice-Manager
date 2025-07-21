@@ -246,7 +246,7 @@ export default function ChatInterface() {
               <div className="mb-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Upload Invoice Document</h3>
                 <p className="text-sm text-gray-600">
-                  Upload an invoice PDF, image, or text file and I'll extract the information for you using AI.
+                  Upload an invoice PDF file and I'll extract the information for you using AI.
                 </p>
               </div>
 

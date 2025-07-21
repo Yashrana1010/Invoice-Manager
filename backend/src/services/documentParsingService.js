@@ -7,9 +7,6 @@ const logger = require('../utils/logger');
 const SUPPORTED_TYPES = {
   'application/pdf': 'pdf',
   'text/plain': 'txt',
-  'image/jpeg': 'image',
-  'image/png': 'image',
-  'image/jpg': 'image'
 };
 
 async function parseDocument(filePath, mimeType) {

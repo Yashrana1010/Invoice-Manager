@@ -47,9 +47,9 @@ export default function FileUpload({ onUploadSuccess, onUploadError }) {
       }
 
       // Validate file type
-      const supportedTypes = ['application/pdf', 'text/plain', 'image/jpeg', 'image/png'];
+      const supportedTypes = ['application/pdf', 'text/plain'];
       if (!supportedTypes.includes(file.type)) {
-        throw new Error('Unsupported file type. Please upload PDF, TXT, JPG, or PNG files.');
+        throw new Error('Unsupported file type. Please upload PDF/text files.');
       }
 
       const formData = new FormData();
@@ -114,7 +114,7 @@ export default function FileUpload({ onUploadSuccess, onUploadError }) {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.txt,.jpg,.jpeg,.png"
+            accept=".pdf,.txt"
             onChange={handleFileSelect}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             disabled={uploading}
