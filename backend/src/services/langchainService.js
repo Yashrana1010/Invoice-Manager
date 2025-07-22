@@ -71,7 +71,15 @@ Possible intents:
 - CREATE_INVOICE: User wants to create an invoice (keywords: invoice, bill, charge, create invoice, send invoice)
 - RECORD_TRANSACTION: User wants to record a transaction (keywords: transaction, expense, income, record, spent, received, paid)
 - GENERATE_BALANCE_SHEET: User wants to see a balance sheet (keywords: balance, sheet, summary, report, overview, total)
+- UPLOAD_DOCUMENT: User wants to upload a document for processing (keywords: upload, document, file, process, analyze)
 - GENERAL_INQUIRY: General questions about finance, help requests, or unclear intent
+- GENERAL_INQUIRY: User asks how to use the system or general questions (keywords: how, what, explain, help, guide)
+- GeNERAL_INQUIRY: User asks about features or capabilities (keywords: features, capabilities, functions, abilities)
+- GENERAL_INQUIRY: User asks for help or support (keywords: help, support, assistance, troubleshoot)
+- GENERAL_INQUIRY: User asks about system status or issues (keywords: status, issues, problems, errors)
+- GENERAL_INQUIRY: User tell some information about themselves or their business (keywords: information, details, business, company, name , company name)
+- GENERAL_INQUIRY: User asks about client or customer information (keywords: client, customer, user, person, name)
+
 
 IMPORTANT: Always respond with valid JSON in this exact format:
 {{
