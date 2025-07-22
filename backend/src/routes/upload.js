@@ -123,7 +123,7 @@ router.post('/extract', authenticateToken, upload.single('document'), async (req
     const documentText = await parseDocument(req.file.path, req.file.mimetype);
 
     // Extract data using AI
-    const extractedData = await extractInvoiceData(documentText);
+    const extractedData = await extractInvoiceData(documentText, userId, conversationId);
 
     // Save extracted data to conversation context for follow-up chat
     setPendingExtractedData(userId, conversationId, extractedData);

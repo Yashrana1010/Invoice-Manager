@@ -1,10 +1,10 @@
 const { extractInvoiceDataWithLangChain } = require('./langchainService');
 const logger = require('../utils/logger');
 
-async function extractInvoiceData(documentText) {
+async function extractInvoiceData(documentText, userId, conversationId) {
   logger.info('Starting LangChain-powered invoice data extraction');
   // Only use LangChain/Gemini, no fallback
-  return await extractInvoiceDataWithLangChain(documentText);
+  return await extractInvoiceDataWithLangChain(documentText, userId, conversationId);
 }
 
 async function extractInvoiceDataAdvanced(documentText, options = {}) {

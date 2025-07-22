@@ -350,7 +350,7 @@ function extractValidJson(str) {
 }
 
 // Invoice data extraction using LangChain (improved)
-async function extractInvoiceDataWithLangChain(documentText) {
+async function extractInvoiceDataWithLangChain(documentText, userId, conversationId = 'default') {
   try {
     logger.info('Starting LangChain-powered invoice data extraction');
 
@@ -362,8 +362,11 @@ async function extractInvoiceDataWithLangChain(documentText) {
       throw new Error('Gemini model is unavailable');
     }
 
+    const context = getConversationContext(userId, conversationId);
+
     const response = await invoiceExtractionChain.invoke({
-      documentText: documentText
+      documentText: documentText,
+      context: context
     });
 
     logger.info(`Raw extraction response: ${response}`);
@@ -392,6 +395,14 @@ async function extractInvoiceDataWithLangChain(documentText) {
     }
 
     const cleanedData = validateAndCleanExtractedData(extractedData);
+
+    // Store in conversation memory
+    addToConversationMemory(userId, conversationId, {
+      type: 'document_extraction',
+      message: documentText,
+      intent: 'UPLOAD_DOCUMENT',
+      timestamp: new Date()
+    });
 
     logger.info(`Successfully extracted invoice data with confidence: ${cleanedData.confidence}`);
     return cleanedData;
