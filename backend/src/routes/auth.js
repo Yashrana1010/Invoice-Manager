@@ -120,25 +120,31 @@ router.get('/xero', passport.authenticate('xero'));
 router.get('/xero/callback',
   passport.authenticate('xero', { failureRedirect: '/login', session: true }),
   (req, res) => {
-    // Generate JWT for the Xero user
-    const jwt = require('jsonwebtoken');
-    const user = req.user && req.user.profile;
-    if (!user) {
+    const user = req.user;
+    if (!user || !user.accessToken) {
       return res.redirect((process.env.FRONTEND_URL || 'http://localhost:5173') + '/login?error=oauth');
     }
-    const token = jwt.sign(
-      {
-        userId: user.id || user.user_id || user.sub || user.email || 'xero-user',
-        email: user.email,
-        name: user.displayName || user.given_name || user.name || 'Xero User',
-        xero: true
-      },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: '24h' }
-    );
-    // Redirect to frontend with token in URL
+    // Store Xero tokens in session
+    req.session.xero = {
+      accessToken: user.accessToken,
+      refreshToken: user.refreshToken,
+      idToken: user.idToken,
+      expires_in: user.expires_in,
+      profile: user.profile
+    };
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    res.redirect(`${frontendUrl}/login?token=${token}`);
+    const params = new URLSearchParams({
+      access_token: user.accessToken,
+      refresh_token: user.refreshToken || '',
+      id_token: user.idToken || '',
+      expires_in: user.expires_in ? String(user.expires_in) : '',
+      email: user.profile?.email || '',
+      name: user.profile?.displayName || user.profile?.given_name || user.profile?.name || ''
+    });
+
+    console.log("access token:", req.session.xero.accessToken);
+
+    res.redirect(`${frontendUrl}/login?${params.toString()}`);
   }
 );
 

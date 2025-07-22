@@ -14,9 +14,11 @@ export default function Login() {
   // Handle Xero OAuth redirect with token in URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
+    // Accept both ?token=... and ?access_token=...
+    const token = params.get('token') || params.get('access_token');
     if (token) {
       localStorage.setItem('token', token);
+      window.history.replaceState({}, document.title, window.location.pathname); // Clean URL
       navigate('/');
     }
   }, [navigate]);
