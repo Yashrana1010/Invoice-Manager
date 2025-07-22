@@ -257,7 +257,7 @@ export default function ChatInterface() {
 
               <div className="mt-6 flex justify-between items-center">
                 <div className="text-xs text-gray-500">
-                  <p>Supported formats: PDF, TXT, JPG, PNG • Max size: 10MB</p>
+                  <p>Supported formats: PDF • Max size: 10MB</p>
                 </div>
                 <button
                   onClick={() => setShowFileUpload(false)}

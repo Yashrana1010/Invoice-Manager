@@ -81,7 +81,7 @@ function validateFile(file) {
   
   // Check file type
   if (!SUPPORTED_TYPES[file.mimetype]) {
-    errors.push(`Unsupported file type: ${file.mimetype}. Supported types: PDF, TXT, JPG, PNG`);
+    errors.push(`Unsupported file type: ${file.mimetype}. Supported types: PDF`);
   }
   
   return errors;
