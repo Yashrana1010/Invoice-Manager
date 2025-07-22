@@ -74,9 +74,11 @@ export default function FileUpload({ onUploadSuccess, onUploadError }) {
       formData.append('document', file);
       formData.append('autoCreate', 'false');
 
+      const accessToken = localStorage.getItem("token");
       const response = await axios.post('/api/upload/extract', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${accessToken}`,
         },
       });
 

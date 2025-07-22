@@ -369,7 +369,7 @@ async function extractInvoiceDataWithLangChain(documentText, userId, conversatio
       context: context
     });
 
-    logger.info(`Raw extraction response: ${response}`);
+    // logger.info(`Raw extraction response: ${response}`);
 
     // Clean the response by removing markdown code blocks
     let cleanedResponse = response.trim();

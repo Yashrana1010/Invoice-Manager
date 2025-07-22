@@ -90,14 +90,14 @@ router.get('/me', authenticateToken, (req, res) => {
 });
 
 // Xero OAuth2 config (use env vars in production)
-const XERO_CLIENT_ID = process.env.XERO_CLIENT_ID || '118A2DE28C17464EB5AEEE033FDD7DB3';
-const XERO_CLIENT_SECRET = process.env.XERO_CLIENT_SECRET || 'V7j5pSnZcHP49b8sZvvYmOz11ppmOOZyMgAvuagWua-ZDJRC';
+const XERO_CLIENT_ID = process.env.XERO_CLIENT_ID || '7D0E365D876F432AB107DD9404E0ABB2';
+const XERO_CLIENT_SECRET = process.env.XERO_CLIENT_SECRET || 'gc-TYYmn7sxaaxgRQeQ7HMHydiwWJLeJmB39VyDbY88hGnef';
 const XERO_CALLBACK_URL = process.env.XERO_CALLBACK_URL || 'http://localhost:3000/api/auth/xero/callback';
 
 // Xero OAuth2 strategy
 passport.use(new XeroStrategy({
-  clientID: XERO_CLIENT_ID || '118A2DE28C17464EB5AEEE033FDD7DB3',
-  clientSecret: XERO_CLIENT_SECRET || 'V7j5pSnZcHP49b8sZvvYmOz11ppmOOZyMgAvuagWua-ZDJRC',
+  clientID: XERO_CLIENT_ID || '7D0E365D876F432AB107DD9404E0ABB2',
+  clientSecret: XERO_CLIENT_SECRET || 'gc-TYYmn7sxaaxgRQeQ7HMHydiwWJLeJmB39VyDbY88hGnef',
   callbackURL: XERO_CALLBACK_URL || 'http://localhost:3000/api/auth/xero/callback',
   scope: 'openid profile email accounting.transactions offline_access',
   state: true

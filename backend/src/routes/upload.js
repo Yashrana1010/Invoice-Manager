@@ -4,12 +4,13 @@ const path = require('path');
 const { authenticateToken } = require('../middleware/auth');
 const { parseDocument, validateFile } = require('../services/documentParsingService');
 const { extractInvoiceData } = require('../services/invoiceExtractionService');
-const { createInvoice } = require('../services/openBookService');
+const { createInvoice ,getTenantId} = require('../services/xeroService');
 const { setPendingExtractedData } = require('../services/langchainService');
 const logger = require('../utils/logger');
 
 const router = express.Router();
 
+const XERO_TENANT_ID = process.env.XERO_TENANT_ID || "c8b88426-261c-409a-8258-d9c3fb365d76";
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -70,14 +71,36 @@ router.post('/invoice', authenticateToken, upload.single('document'), async (req
     if (autoCreate && canAutoCreateInvoice(extractedData)) {
       try {
         const invoiceData = {
-          client: extractedData.clientName,
-          amount: extractedData.totalAmount,
-          description: extractedData.description || 'Services as per uploaded invoice',
-          date: extractedData.invoiceDate || new Date().toISOString().split('T')[0],
-          userId
+          Type: 'ACCREC',
+          Contact: {
+            Name: extractedData.clientName || undefined,
+            ContactID: extractedData.clientId || undefined
+          },
+          DateString: extractedData.invoiceDate || new Date().toISOString(),
+          DueDateString: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString(),
+          InvoiceNumber: extractedData.invoiceNumber || `INV-${Date.now()}`,
+          Reference: extractedData.reference || '',
+          SubTotal: extractedData.subtotal ? extractedData.subtotal.toFixed(2) : '0.00',
+          TotalTax: extractedData.taxAmount ? extractedData.taxAmount.toFixed(2) :
+            '0.00',
+          Total: extractedData.totalAmount ? extractedData.totalAmount.toFixed(2) : '0.00',
+          LineItems: extractedData.lineItems.map(item => ({
+            ItemCode: item.itemCode || undefined,
+            Description: item.description || undefined,
+            Quantity: item.quantity ? item.quantity.toString() : '1',
+            UnitAmount: item.unitAmount ? item.unitAmount.toFixed(2) : '0.00',
+            TaxType: item.taxType || 'OUTPUT',
+            TaxAmount: item.taxAmount ? item.taxAmount.toFixed(2) : '0.00',
+            LineAmount: item.lineAmount ? item.lineAmount.toFixed(2) : '0.00',
+            AccountCode: item.accountCode || '200',
+            Tracking: item.tracking || []
+          }))
         };
 
-        const invoice = await createInvoice(invoiceData);
+
+        const xeroTenantId = req.session.xeroTenantId || await getTenantId(req.session.token);
+        const invoice = await createInvoice(invoiceData, req.session.token, xeroTenantId);
+
         response.invoice = invoice;
         response.message = 'Document processed and invoice created successfully';
         response.autoCreated = true;
@@ -114,7 +137,7 @@ router.post('/extract', authenticateToken, upload.single('document'), async (req
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
-
+    
     const userId = req.user.userId;
     const conversationId = req.body.conversationId || 'default';
     logger.info(`Extracting data from: ${req.file.originalname} for user ${userId}`);
@@ -124,6 +147,14 @@ router.post('/extract', authenticateToken, upload.single('document'), async (req
 
     // Extract data using AI
     const extractedData = await extractInvoiceData(documentText, userId, conversationId);
+    
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    const xeroAccessToken = authHeader && authHeader.startsWith('Bearer ')
+      ? authHeader.slice(7)
+      : null;
+
+    // const result = await createInvoice(extractedData, xeroAccessToken, XERO_TENANT_ID );
+    // logger.info('data sending to Xero:', result);
 
     // Save extracted data to conversation context for follow-up chat
     setPendingExtractedData(userId, conversationId, extractedData);
