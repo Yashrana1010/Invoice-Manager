@@ -8,37 +8,30 @@ const trackingSchema = z.object({
 
 const lineItemSchema = z.object({
   ItemCode: z.string().default("item-new"),
-  Description: z.string(),
+  Description: z.string().default("Invoice item"),
   Quantity: z.string().default("1"),
-  UnitAmount: z.string(),
+  UnitAmount: z.string().default("0.00"),
   TaxType: z.string().default("OUTPUT"),
   TaxAmount: z.string().default("0.00"),
-  LineAmount: z.string(),
-  AccountCode: z.string(),
+  LineAmount: z.string().default("0.00"),
+  AccountCode: z.string().default("200"),
   Tracking: z.array(trackingSchema).optional().default([])
 });
 
 const contactSchema = z.object({
-  ContactID: z.string().optional(),
-  Name: z.string().optional()
+  ContactID: z.string().optional().default(""),
+  Name: z.string().optional().default("Unknown Client")
 }).refine(data => data.ContactID || data.Name, {
   message: "Either ContactID or Name must be provided",
   path: ["Contact"]
 });
 
 const xeroInvoiceSchema = z.object({
-  Type: z.literal("ACCREC").default("ACCREC"),
-  Contact: contactSchema,  // Ensure 'Contact' is not undefined
-  DateString: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/).default(
-    new Date().toISOString().split(".")[0] + "Z"
-  ),
-  DueDateString: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/).default(
-    new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split(".")[0] + "Z"
-  ),
-  ExpectedPaymentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/).default(
-    new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split(".")[0] + "Z"
-  ),
-  InvoiceNumber: z.string(),
+  Contact: contactSchema.default({ Name: "Unknown Client" }),
+  DateString: z.string().default("1970-01-01"),
+  DueDateString: z.string().default("1970-01-01"),
+  ExpectedPaymentDate: z.string().default("1970-01-01"),
+  InvoiceNumber: z.string().default("INV-0000"),
   Reference: z.string().optional().default(""),
   BrandingThemeID: z.string().default("34efa745-7238-4ead-b95e-1fe6c816adbe"),
   Url: z.string().url().default("https://example.com/invoice"),
@@ -48,7 +41,18 @@ const xeroInvoiceSchema = z.object({
   SubTotal: z.string().default("0.00"),
   TotalTax: z.string().default("0.00"),
   Total: z.string().default("0.00"),
-  LineItems: z.array(lineItemSchema).default([])
+  LineItems: z.array(lineItemSchema).default([
+    {
+      Description: "Invoice item",
+      Quantity: "1",
+      UnitAmount: "0.00",
+      TaxType: "OUTPUT",
+      TaxAmount: "0.00",
+      LineAmount: "0.00",
+      AccountCode: "200",
+      Tracking: []
+    }
+  ])
 });
 
 module.exports = { xeroInvoiceSchema };
