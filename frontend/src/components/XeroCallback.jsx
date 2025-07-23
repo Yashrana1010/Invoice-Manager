@@ -42,8 +42,8 @@ export default function XeroCallback() {
         }
 
         // Xero OAuth credentials
-        const client_id = '118A2DE28C17464EB5AEEE033FDD7DB3';
-        const client_secret = 'Mz9eY_u6E_sF8kGeS5FuY5fszEsvffAsrQ8JIC86PJIMVBoo';
+        const client_id = process.env.VITE_XERO_CLIENT_ID;
+        const client_secret = process.env.VITE_XERO_CLIENT_SECRET;
 
         // Try different possible redirect URIs that might have been used initially
         const possibleRedirectUris = [
