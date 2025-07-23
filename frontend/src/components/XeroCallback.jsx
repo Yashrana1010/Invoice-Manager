@@ -47,7 +47,7 @@ export default function XeroCallback() {
 
         // Try different possible redirect URIs that might have been used initially
         const possibleRedirectUris = [
-          'http://localhost:5173/xero/callback',
+          'https://invoice-manager-six.vercel.app/xero/callback',
         ];
 
         // First, try to make the request through your backend to avoid CORS
