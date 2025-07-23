@@ -158,7 +158,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/xerotest', createInvoice);
+
 
 // Health check
 app.get('/api/health', (req, res) => {
