@@ -6,6 +6,7 @@ import ChatInterface from './components/ChatInterface';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import ProtectedRoute from './components/ProtectedRoute';
+import XeroCallback from './components/XeroCallback';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <div className="min-h-screen bg-gray-50">
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/xero/callback" element={<XeroCallback />} />
             <Route path="/" element={
               <ProtectedRoute>
                 <Layout>

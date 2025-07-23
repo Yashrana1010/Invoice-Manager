@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Bot } from 'lucide-react';
+import axios from 'axios';
 
 export default function Login() {
   const [email, setEmail] = useState('demo@example.com');
@@ -16,12 +17,41 @@ export default function Login() {
     const params = new URLSearchParams(window.location.search);
     // Accept both ?token=... and ?access_token=...
     const token = params.get('token') || params.get('access_token');
+
+    console.log('Xero OAuth param:', params.toString());
+
     if (token) {
       localStorage.setItem('token', token);
       window.history.replaceState({}, document.title, window.location.pathname); // Clean URL
       navigate('/');
     }
+
   }, [navigate]);
+
+  const XERO_CLIENT_ID = '118A2DE28C17464EB5AEEE033FDD7DB3';
+  const XERO_CALLBACK_URL = 'http://localhost:5173/xero/callback'; // This should be a frontend route you handle
+  const XERO_SCOPES = [
+    'offline_access',
+    'accounting.transactions',
+    'openid',
+    'profile',
+    'email',
+    'accounting.contacts',
+    'accounting.settings'
+  ].join(' ');
+  const STATE = '1234';
+
+  function handleXeroLogin() {
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: XERO_CLIENT_ID,
+      redirect_uri: XERO_CALLBACK_URL,
+      scope: XERO_SCOPES,
+      state: STATE,
+    });
+    window.location.href = `https://login.xero.com/identity/connect/authorize?${params.toString()}`;
+  }
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -101,7 +131,7 @@ export default function Login() {
         <div className="mt-6 flex flex-col items-center">
           <button
             type="button"
-            onClick={() => window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/auth/xero`}
+            onClick={handleXeroLogin}
             className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             Sign in with Xero
