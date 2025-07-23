@@ -1,6 +1,5 @@
 const { detectIntent, generateConversationalResponse, getPendingExtractedData, clearPendingExtractedData } = require('./langchainService');
 const { extractFinancialData } = require('./extractionService');
-const { createInvoice, recordTransaction, generateBalanceSheet } = require('./openBookService');
 const logger = require('../utils/logger');
 
 async function processMessage(message, userId, conversationId) {

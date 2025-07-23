@@ -60,7 +60,7 @@ router.post('/login', validateRequest(loginSchema), async (req, res) => {
 
     const token = jwt.sign(
       { userId: demoUser.id, email: demoUser.email },
-      process.env.JWT_SECRET || 'fallback-secret',
+      process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
