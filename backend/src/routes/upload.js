@@ -153,8 +153,7 @@ router.post('/extract', authenticateToken, upload.single('document'), async (req
       ? authHeader.slice(7)
       : null;
 
-    // const result = await createInvoice(extractedData, xeroAccessToken, XERO_TENANT_ID );
-    // logger.info('data sending to Xero:', result);
+    await createInvoice(extractedData, xeroAccessToken, XERO_TENANT_ID );
 
     // Save extracted data to conversation context for follow-up chat
     setPendingExtractedData(userId, conversationId, extractedData);
