@@ -19,19 +19,20 @@ const lineItemSchema = z.object({
 });
 
 const contactSchema = z.object({
-  ContactID: z.string().optional().default(""),
-  Name: z.string().optional().default("Unknown Client")
+  ContactID: z.string().optional().default("b9794c5e-36be-4502-bb11-9f8cd2541c0a"),
+  Name: z.string().optional()
 }).refine(data => data.ContactID || data.Name, {
   message: "Either ContactID or Name must be provided",
   path: ["Contact"]
 });
 
 const xeroInvoiceSchema = z.object({
-  Contact: contactSchema.default({ Name: "Unknown Client" }),
-  DateString: z.string().default("1970-01-01"),
-  DueDateString: z.string().default("1970-01-01"),
-  ExpectedPaymentDate: z.string().default("1970-01-01"),
-  InvoiceNumber: z.string().default("INV-0000"),
+  Type: z.string().default("ACCREC"),
+  Contact: contactSchema.default({ ContactID: "b9794c5e-36be-4502-bb11-9f8cd2541c0a" }),
+  DateString: z.string().default("2009-09-08T00:00:00"),
+  DueDateString: z.string().default("2009-09-08T00:00:00"),
+  ExpectedPaymentDate: z.string().default("2009-09-08T00:00:00"),
+  InvoiceNumber: z.string().default("INV-00065"),
   Reference: z.string().optional().default(""),
   BrandingThemeID: z.string().default("34efa745-7238-4ead-b95e-1fe6c816adbe"),
   Url: z.string().url().default("https://example.com/invoice"),
@@ -43,6 +44,7 @@ const xeroInvoiceSchema = z.object({
   Total: z.string().default("0.00"),
   LineItems: z.array(lineItemSchema).default([
     {
+      ItemCode: "item-new",
       Description: "Invoice item",
       Quantity: "1",
       UnitAmount: "0.00",
@@ -59,13 +61,10 @@ const xeroInvoiceSchema = z.object({
 function mapToXeroInvoiceSchema(data) {
   const today = new Date().toISOString().split('T')[0];
   return {
-    Contact: {
-      Name: data.clientName || "Unknown Client"
-    },
     DateString: data.invoiceDate || today,
     DueDateString: data.dueDate || today,
     ExpectedPaymentDate: data.dueDate || today,
-    InvoiceNumber: data.invoiceNumber || "INV-0000",
+    InvoiceNumber: data.invoiceNumber || "INV-000065",
     Reference: "",
     BrandingThemeID: "34efa745-7238-4ead-b95e-1fe6c816adbe",
     Url: "https://example.com/invoice",
