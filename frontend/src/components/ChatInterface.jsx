@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Paperclip } from 'lucide-react';
 import axios from 'axios';
 import FileUpload from './FileUpload';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function ChatInterface() {
   const [messages, setMessages] = useState([
@@ -16,6 +17,7 @@ export default function ChatInterface() {
   const [loading, setLoading] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const messagesEndRef = useRef(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -36,10 +38,11 @@ export default function ChatInterface() {
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/chat/message', {
-        message: input,
-        conversationId: 'default'
-      });
+      const response = await axios.post(
+        '/api/chat/message',
+        { message: input, conversationId: 'default' },
+        { headers: { Authorization: `Bearer ${user?.token}` } }
+      );
 
       const botMessage = {
         id: (Date.now() + 1).toString(),

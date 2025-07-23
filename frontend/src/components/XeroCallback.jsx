@@ -99,6 +99,7 @@ export default function XeroCallback() {
 
               tokenExchangeSuccessful = true;
               console.log(`Token exchange successful with redirect_uri: ${redirect_uri}`);
+              window.location.href = '/';
               break; // Exit loop on success
 
             } catch (attemptError) {
