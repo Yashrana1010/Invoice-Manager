@@ -55,4 +55,39 @@ const xeroInvoiceSchema = z.object({
   ])
 });
 
-module.exports = { xeroInvoiceSchema };
+
+function mapToXeroInvoiceSchema(data) {
+  const today = new Date().toISOString().split('T')[0];
+  return {
+    Contact: {
+      Name: data.clientName || "Unknown Client"
+    },
+    DateString: data.invoiceDate || today,
+    DueDateString: data.dueDate || today,
+    ExpectedPaymentDate: data.dueDate || today,
+    InvoiceNumber: data.invoiceNumber || "INV-0000",
+    Reference: "",
+    BrandingThemeID: "34efa745-7238-4ead-b95e-1fe6c816adbe",
+    Url: "https://example.com/invoice",
+    CurrencyCode: data.currency || "INR",
+    Status: "SUBMITTED",
+    LineAmountTypes: "Inclusive",
+    SubTotal: (data.subtotal != null ? data.subtotal : 0).toString(),
+    TotalTax: (data.taxAmount != null ? data.taxAmount : 0).toString(),
+    Total: (data.totalAmount != null ? data.totalAmount : 0).toString(),
+    LineItems: [
+      {
+        Description: data.description || "Invoice item",
+        Quantity: "1",
+        UnitAmount: (data.subtotal != null ? data.subtotal : 0).toString(),
+        TaxType: "OUTPUT",
+        TaxAmount: (data.taxAmount != null ? data.taxAmount : 0).toString(),
+        LineAmount: (data.subtotal != null ? data.subtotal : 0).toString(),
+        AccountCode: "200",
+        Tracking: []
+      }
+    ]
+  };
+}
+
+module.exports = { xeroInvoiceSchema, mapToXeroInvoiceSchema };
