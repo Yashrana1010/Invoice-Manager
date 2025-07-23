@@ -29,7 +29,7 @@ export default function Login() {
   }, [navigate]);
 
   const XERO_CLIENT_ID = '118A2DE28C17464EB5AEEE033FDD7DB3';
-  const XERO_CALLBACK_URL = 'http://localhost:5173/xero/callback'; // This should be a frontend route you handle
+  const XERO_CALLBACK_URL = 'https://invoice-manager-six.vercel.app/xero/callback'; // This should be a frontend route you handle
   const XERO_SCOPES = [
     'offline_access',
     'accounting.transactions',
