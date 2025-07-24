@@ -3,6 +3,12 @@ import { Send, Bot, User, Paperclip } from 'lucide-react';
 import axios from 'axios';
 import FileUpload from './FileUpload';
 import { useAuth } from '../contexts/AuthContext';
+import { marked } from 'marked';
+
+marked.setOptions({
+  gfm: true,
+  breaks: false, 
+});
 
 export default function ChatInterface() {
   const [messages, setMessages] = useState([
@@ -159,7 +165,9 @@ export default function ChatInterface() {
                 </div>
               )}
               <div className={`chat-message ${message.sender === 'user' ? 'chat-user' : 'chat-bot'}`}>
-                <div className="text-sm whitespace-pre-line">{message.content}</div>
+                <div className="text-sm prose max-w-none"
+                dangerouslySetInnerHTML={{ __html: marked(message.content) }}
+                />
                 {message.data && message.type === 'file-upload' && (
                   <div className="mt-3 p-3 bg-white/20 rounded-lg">
                     <div className="text-xs font-medium mb-2">Extracted Data:</div>
@@ -215,7 +223,7 @@ export default function ChatInterface() {
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyUp={handleKeyPress}
             placeholder="Type your message or upload a document... (e.g., 'Create an invoice for John Doe for $500')"
             className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
             rows="2"
