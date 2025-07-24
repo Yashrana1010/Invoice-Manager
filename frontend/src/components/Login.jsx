@@ -136,14 +136,6 @@ export default function Login() {
           >
             Sign in with Xero
           </button>
-
-          <button
-            type="button"
-            onClick={navigate.bind(null, '/xero/callback?code=vickybhai%20test')}
-            className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Test Xero Callback
-          </button>
         </div>
       </div>
     </div>
