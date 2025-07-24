@@ -41,74 +41,61 @@ export default function XeroCallback() {
           console.warn('No state parameter received - this might be a security issue');
         }
 
+        // Remove Option 1: Try backend proxy first (recommended)
+        // Only perform direct token exchange with Xero
+
         // Xero OAuth credentials
-        const client_id = process.env.VITE_XERO_CLIENT_ID;
-        const client_secret = process.env.VITE_XERO_CLIENT_SECRET;
+        const client_id = `${import.meta.env.VITE_XERO_CLIENT_ID}`;
+        const client_secret = `${import.meta.env.VITE_XERO_CLIENT_SECRET}`;
 
         // Try different possible redirect URIs that might have been used initially
-        const possibleRedirectUris = [
-          'https://invoice-manager-six.vercel.app/xero/callback',
-        ];
+        const possibleRedirectUris = [`${import.meta.env.VITE_XERO_CALLBACK_URL}`];
 
-        // First, try to make the request through your backend to avoid CORS
         let response;
         let tokenExchangeSuccessful = false;
 
-        // Option 1: Try backend proxy first (recommended)
-        try {
-          console.log('Attempting token exchange through backend...');
-          response = await axios.post('/api/auth/xero/token-exchange', {
-            code: code,
-            state: state
-          });
-          tokenExchangeSuccessful = true;
-          console.log('Backend token exchange successful:', response.data);
-        } catch (backendError) {
-          console.log('Backend token exchange failed, trying direct approach:', backendError.message);
+        // Option 2: Direct token exchange with multiple redirect URI attempts
+        for (let i = 0; i < possibleRedirectUris.length; i++) {
+          const redirect_uri = possibleRedirectUris[i];
 
-          // Option 2: Direct token exchange with multiple redirect URI attempts
-          for (let i = 0; i < possibleRedirectUris.length; i++) {
-            const redirect_uri = possibleRedirectUris[i];
+          try {
+            console.log(`Trying token exchange with redirect_uri: ${redirect_uri}`);
 
-            try {
-              console.log(`Trying token exchange with redirect_uri: ${redirect_uri}`);
+            // Create form data for token exchange
+            const tokenData = {
+              grant_type: 'authorization_code',
+              code: code,
+              redirect_uri: redirect_uri,
+            };
 
-              // Create form data for token exchange
-              const tokenData = {
-                grant_type: 'authorization_code',
-                code: code,
-                redirect_uri: redirect_uri,
-              };
+            // Convert object to URL-encoded string
+            const formData = new URLSearchParams(tokenData).toString();
 
-              // Convert object to URL-encoded string
-              const formData = new URLSearchParams(tokenData).toString();
+            const basicAuth = btoa(`${client_id}:${client_secret}`);
 
-              const basicAuth = btoa(`${client_id}:${client_secret}`);
+            console.log('Token exchange data:', formData);
 
-              console.log('Token exchange data:', formData);
+            // Send the form-encoded string as body
+            response = await axios.post('https://identity.xero.com/connect/token', formData, {
+              headers: {
+                Authorization: `Basic ${basicAuth}`,
+                'Content-Type': 'application/x-www-form-urlencoded',
+                Accept: 'application/json',
+              },
+              timeout: 10000,
+            });
 
-              // Send the form-encoded string as body
-              response = await axios.post('https://identity.xero.com/connect/token', formData, {
-                headers: {
-                  Authorization: `Basic ${basicAuth}`,
-                  'Content-Type': 'application/x-www-form-urlencoded',
-                  Accept: 'application/json',
-                },
-                timeout: 10000,
-              });
+            tokenExchangeSuccessful = true;
+            console.log(`Token exchange successful with redirect_uri: ${redirect_uri}`);
+            window.location.href = '/';
+            break; // Exit loop on success
 
-              tokenExchangeSuccessful = true;
-              console.log(`Token exchange successful with redirect_uri: ${redirect_uri}`);
-              window.location.href = '/';
-              break; // Exit loop on success
+          } catch (attemptError) {
+            console.log(`Failed with redirect_uri ${redirect_uri}:`, attemptError.response?.data || attemptError.message);
 
-            } catch (attemptError) {
-              console.log(`Failed with redirect_uri ${redirect_uri}:`, attemptError.response?.data || attemptError.message);
-
-              // If this is the last attempt, throw the error
-              if (i === possibleRedirectUris.length - 1) {
-                throw attemptError;
-              }
+            // If this is the last attempt, throw the error
+            if (i === possibleRedirectUris.length - 1) {
+              throw attemptError;
             }
           }
         }

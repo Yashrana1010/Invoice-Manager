@@ -3,9 +3,8 @@ const { HumanMessage, SystemMessage, AIMessage } = require('@langchain/core/mess
 const { PromptTemplate } = require('@langchain/core/prompts');
 const { StringOutputParser } = require('@langchain/core/output_parsers');
 const { RunnableSequence } = require('@langchain/core/runnables');
-const {getInvoices} = require('./xeroService');
+const { getInvoices } = require('./xeroService');
 const logger = require('../utils/logger');
-// import dotenv
 require('dotenv').config();
 
 // Initialize Gemini model with correct configuration
@@ -13,11 +12,16 @@ const model = new ChatGoogleGenerativeAI({
   modelName: process.env.GEMINI_MODEL,
   apiKey: process.env.GOOGLE_API_KEY,
   temperature: 0.1,
-  maxOutputTokens: 2000, // Increased to prevent truncation
-  // Additional configuration to avoid API version issues
-  streaming: false, // Changed to false to prevent truncation issues
+  maxOutputTokens: 2000,
+  streaming: false,
   verbose: false,
 });
+
+// Store connection status
+let modelConnectionWorking = null;
+
+// Conversation memory storage (in production, use Redis or database)
+const conversationMemory = new Map();
 
 function parseGeminiResponse(response) {
   try {
@@ -55,16 +59,15 @@ async function testModelConnection() {
   }
 }
 
-// Store connection status
-let modelConnectionWorking = null;
-
 // Initialize connection test
-testModelConnection().then(status => {
-  modelConnectionWorking = status;
-});
-
-// Conversation memory storage (in production, use Redis or database)
-const conversationMemory = new Map();
+testModelConnection()
+  .then(status => {
+    modelConnectionWorking = status;
+  })
+  .catch(error => {
+    modelConnectionWorking = false;
+    logger.error('Model connection initialization failed:', error.message);
+  });
 
 // Intent detection prompt template
 const intentDetectionPrompt = PromptTemplate.fromTemplate(`
@@ -75,15 +78,8 @@ Possible intents:
 - RECORD_TRANSACTION: User wants to record a transaction (keywords: transaction, expense, income, record, spent, received, paid)
 - GENERATE_BALANCE_SHEET: User wants to see a balance sheet (keywords: balance, sheet, summary, report, overview, total)
 - UPLOAD_DOCUMENT: User wants to upload a document for processing (keywords: upload, document, file, process, analyze)
-- DISPLAY_INVOICE: User wants to get an invoice from database by invoiceId(keywords: show invoice , show bill, get invoice, ) 
+- DISPLAY_INVOICE: User wants to get an invoice from database by invoiceId (keywords: show invoice, show bill, get invoice, display invoice)
 - GENERAL_INQUIRY: General questions about finance, help requests, or unclear intent
-- GENERAL_INQUIRY: User asks how to use the system or general questions (keywords: how, what, explain, help, guide)
-- GeNERAL_INQUIRY: User asks about features or capabilities (keywords: features, capabilities, functions, abilities)
-- GENERAL_INQUIRY: User asks for help or support (keywords: help, support, assistance, troubleshoot)
-- GENERAL_INQUIRY: User asks about system status or issues (keywords: status, issues, problems, errors)
-- GENERAL_INQUIRY: User tell some information about themselves or their business (keywords: information, details, business, company, name , company name)
-- GENERAL_INQUIRY: User asks about client or customer information (keywords: client, customer, user, person, name)
-
 
 IMPORTANT: Always respond with valid JSON in this exact format:
 {{
@@ -112,14 +108,13 @@ Previous conversation context: {context}
 
 // General conversation prompt template
 const conversationPrompt = PromptTemplate.fromTemplate(`
-You are a helpful and friendly AI assistant for an invoice management system. You can help users with:
+You are a helpful and friendly AI assistant for an Finance management system. You can help users with:
 
 ✅ Creating invoices: "Create an invoice for [client] for $[amount]"
 ✅ Recording transactions: "I spent $[amount] on [description]"
 ✅ Viewing balance sheets: "Show me my balance sheet"
 ✅ Uploading documents: Users can upload invoice documents for automatic data extraction
 ✅ Show invoice: "get invoice with invoiceId ab78dbe6-b3cf-4420-986d-24a041e3ec0f"
-
 
 Guidelines:
 - Be conversational, helpful, and engaging
@@ -183,15 +178,12 @@ Invoice text to analyze:
 {documentText}
 `);
 
-
 const invoiceChatDisplayPrompt = PromptTemplate.fromTemplate(`
 You are a helpful assistant that displays invoice data in a clean and readable chat format.
 
 Here is the invoice text:
 {invoiceJson}
-
 `);
-
 
 const extractIdPrompt = PromptTemplate.fromTemplate(`
 You are an intelligent assistant designed to extract ID values from user messages.
@@ -213,12 +205,11 @@ Input: "Can you fetch details for invoice ID INV-0001?"
 Output: "INV-0001"
 
 Input: "Here are the IDs: 123456, 987654"
-Output: ["123456", "987654"]
+Output: "123456"
 
 Input: "Hey there!"
 Output: null
 `);
-
 
 // Create LangChain chains
 const intentChain = RunnableSequence.from([
@@ -251,7 +242,55 @@ const extractIdChain = RunnableSequence.from([
   new StringOutputParser(),
 ]);
 
-// Enhanced intent detection with conversation context (no fallback)
+// Fallback intent detection (rule-based)
+function detectIntentFallback(message) {
+  const lowerMessage = message.toLowerCase();
+
+  if (lowerMessage.includes('invoice') && (lowerMessage.includes('create') || lowerMessage.includes('make'))) {
+    return {
+      intent: 'CREATE_INVOICE',
+      confidence: 0.8,
+      entities: { client: null, amount: null, description: null, date: null },
+      reasoning: 'Fallback: Detected invoice creation keywords'
+    };
+  }
+
+  if (lowerMessage.includes('transaction') || lowerMessage.includes('expense') || lowerMessage.includes('spent')) {
+    return {
+      intent: 'RECORD_TRANSACTION',
+      confidence: 0.8,
+      entities: { client: null, amount: null, description: null, date: null },
+      reasoning: 'Fallback: Detected transaction keywords'
+    };
+  }
+
+  if (lowerMessage.includes('balance') || lowerMessage.includes('sheet') || lowerMessage.includes('summary')) {
+    return {
+      intent: 'GENERATE_BALANCE_SHEET',
+      confidence: 0.8,
+      entities: { client: null, amount: null, description: null, date: null },
+      reasoning: 'Fallback: Detected balance sheet keywords'
+    };
+  }
+
+  if (lowerMessage.includes('show') && lowerMessage.includes('invoice')) {
+    return {
+      intent: 'DISPLAY_INVOICE',
+      confidence: 0.8,
+      entities: { client: null, amount: null, description: null, date: null },
+      reasoning: 'Fallback: Detected display invoice keywords'
+    };
+  }
+
+  return {
+    intent: 'GENERAL_INQUIRY',
+    confidence: 0.7,
+    entities: { client: null, amount: null, description: null, date: null },
+    reasoning: 'Fallback: Default to general inquiry'
+  };
+}
+
+// Enhanced intent detection with conversation context
 async function detectIntent(message, userId, conversationId = 'default') {
   try {
     logger.info(`Detecting intent for message: "${message}"`);
@@ -304,44 +343,69 @@ async function detectIntent(message, userId, conversationId = 'default') {
   }
 }
 
-// Interactive conversation handling (no fallback)
+// Function to build dynamic finance manager prompt
+function buildFinanceManagerPrompt({ context, message }) {
+  return `
+You are a finance manager AI assistant for an Finance management system.
+
+${context ? `Previous conversation:\n${context}\n` : ''}
+
+User message: ${message}
+
+Reply as a knowledgeable, concise, and helpful finance manager.
+`;
+}
+
+// Generate fallback response
+function generateFallbackResponse(message) {
+  const lowerMessage = message.toLowerCase();
+
+  if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+    return "Hello! I'm your finance assistant. I can help you create invoices, record transactions, and manage your financial data. How can I assist you today? 😊";
+  }
+
+  if (lowerMessage.includes('help')) {
+    return "I can help you with:\n✅ Creating invoices\n✅ Recording transactions\n✅ Viewing balance sheets\n✅ Processing uploaded documents\n\nWhat would you like to do?";
+  }
+
+  return "I'm currently experiencing some technical difficulties, but I'm here to help! Please try rephrasing your request or contact support if the issue persists.";
+}
+
+// Replace conversationChain with a dynamic prompt
 async function generateConversationalResponse(message, userId, conversationId = 'default') {
   try {
     logger.info(`Generating conversational response for: "${message}"`);
 
-    // Check if model connection is working
     if (modelConnectionWorking === false) {
       logger.info('Using fallback conversation response due to model connection issues');
       return generateFallbackResponse(message);
     }
 
-    // Get conversation context
     const context = getConversationContext(userId, conversationId);
 
-    const response = await conversationChain.invoke({
-      message: message,
-      context: context
-    });
+    // Build the prompt dynamically
+    const prompt = buildFinanceManagerPrompt({ context, message });
+
+    // Use the model directly with the dynamic prompt
+    const response = await model.invoke([new HumanMessage(prompt)]);
 
     // Store in conversation memory
     addToConversationMemory(userId, conversationId, {
       type: 'conversation',
       userMessage: message,
-      botResponse: response,
+      botResponse: response.content,
       timestamp: new Date()
     });
 
-    return response;
+    return response.content;
   } catch (error) {
     logger.error('Conversation generation error:', error.message);
 
-    // Update connection status if it's a model error
     if (error.message.includes('GoogleGenerativeAI Error') || error.message.includes('404 Not Found')) {
       modelConnectionWorking = false;
       logger.warn('Marking Gemini model as unavailable due to API error');
     }
 
-    // Fallback response
     return generateFallbackResponse(message);
   }
 }
@@ -418,14 +482,9 @@ async function extractInvoiceDataWithLangChain(documentText, userId, conversatio
       throw new Error('Gemini model is unavailable');
     }
 
-    const context = getConversationContext(userId, conversationId);
-
     const response = await invoiceExtractionChain.invoke({
-      documentText: documentText,
-      context: context
+      documentText: documentText
     });
-
-    // logger.info(`Raw extraction response: ${response}`);
 
     // Clean the response by removing markdown code blocks
     let cleanedResponse = response.trim();
@@ -465,6 +524,61 @@ async function extractInvoiceDataWithLangChain(documentText, userId, conversatio
   } catch (error) {
     logger.error('LangChain invoice extraction error:', error.message);
     throw new Error('AI extraction failed: ' + error.message);
+  }
+}
+
+// Display invoice data
+async function displayInvoiceData(message, userId, conversationId = 'default', accessToken) {
+  try {
+    logger.info(`[displayInvoiceData] Generating display invoice response for: "${message}"`);
+
+    // Check if model connection is working
+    if (modelConnectionWorking === false) {
+      logger.info('[displayInvoiceData] Using fallback response due to model connection issues');
+      return generateFallbackResponse(message);
+    }
+
+    const context = getConversationContext(userId, conversationId);
+
+    const invoiceId = await extractIdChain.invoke({
+      userMessage: message,
+      context: context
+    });
+
+    console.log("Extracted invoiceId:", invoiceId);
+
+    if (!invoiceId || invoiceId === 'null') {
+      return "I couldn't find an invoice ID in your message. Please provide a valid invoice ID.";
+    }
+
+    const documentText = await getInvoices(invoiceId, accessToken);
+    console.log("Fetched invoice data:", documentText);
+
+    const response = await InvoiceDisplayChain.invoke({
+      invoiceJson: JSON.stringify(documentText),
+      context: context
+    });
+
+    // Store in conversation memory
+    addToConversationMemory(userId, conversationId, {
+      type: 'conversation',
+      userMessage: message,
+      botResponse: response,
+      timestamp: new Date()
+    });
+
+    return response;
+  } catch (error) {
+    logger.error(`[displayInvoiceData] Error generating response: ${error.message}`);
+
+    // Update connection status if it's a model error
+    if (error.message.includes('GoogleGenerativeAI Error') || error.message.includes('404 Not Found')) {
+      modelConnectionWorking = false;
+      logger.warn('[displayInvoiceData] Marking Gemini model as unavailable due to API error');
+    }
+
+    // Fallback response
+    return generateFallbackResponse(message);
   }
 }
 
@@ -574,60 +688,6 @@ function isValidDate(dateString) {
 function isModelAvailable() {
   return modelConnectionWorking !== false;
 }
-
-async function displayInvoiceData(message, userId, conversationId = 'default', accessToken) {
-  try {
-    logger.info(`[displayInvoiceData] Generating display invoice response for: "${message}"`);
-
-    // Check if model connection is working
-    if (modelConnectionWorking === false) {
-      logger.info('[displayInvoiceData] Using fallback response due to model connection issues');
-      return generateFallbackResponse(message);
-    }
-    const context = getConversationContext(userId, conversationId);
-
-    const invoiceId = await extractIdChain.invoke({
-      userMessage: message,
-      context: context
-    });
-    console.log("Extracted invoiceId:", invoiceId);
-
-    const documentText = await getInvoices(invoiceId, accessToken);
-    console.log("Fetched invoice data:", documentText);
-
-    // Get conversation context
-
-    const response = await InvoiceDisplayChain.invoke({
-      invoiceJson: JSON.stringify(documentText),
-      context: context
-    });
-
-    // Store in conversation memory
-    addToConversationMemory(userId, conversationId, {
-      type: 'conversation',
-      userMessage: message,
-      botResponse: response,
-      timestamp: new Date()
-    });
-
-    return response;
-  } catch (error) {
-    logger.error(`[displayInvoiceData] Error generating response: ${error.message}`);
-
-    // Update connection status if it's a model error
-    if (error.message.includes('GoogleGenerativeAI Error') || error.message.includes('404 Not Found')) {
-      modelConnectionWorking = false;
-      logger.warn('[displayInvoiceData] Marking Gemini model as unavailable due to API error');
-    }
-
-    // Fallback response
-    return generateFallbackResponse(message);
-  }
-}
-function generateFallbackResponse(message) {
-  return "Sorry, I couldn't process your request at this time. Please try again later.";
-}
-
 
 module.exports = {
   detectIntent,
