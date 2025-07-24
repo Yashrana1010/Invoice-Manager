@@ -5,16 +5,18 @@ const { StringOutputParser } = require('@langchain/core/output_parsers');
 const { RunnableSequence } = require('@langchain/core/runnables');
 const {getInvoices} = require('./xeroService');
 const logger = require('../utils/logger');
+// import dotenv
+require('dotenv').config();
 
 // Initialize Gemini model with correct configuration
 const model = new ChatGoogleGenerativeAI({
-  modelName: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+  modelName: process.env.GEMINI_MODEL,
   apiKey: process.env.GOOGLE_API_KEY,
   temperature: 0.1,
   maxOutputTokens: 2000, // Increased to prevent truncation
   // Additional configuration to avoid API version issues
   streaming: false, // Changed to false to prevent truncation issues
-  verbose: false
+  verbose: false,
 });
 
 function parseGeminiResponse(response) {

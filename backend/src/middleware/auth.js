@@ -10,7 +10,7 @@ function authenticateToken(req, res, next) {
   }
 
   // Accept both JWT (from backend) and Xero access tokens (which are JWTs but signed by Xero)
-  const jwtSecret = process.env.JWT_SECRET || 'fallback-secret';
+  const jwtSecret = process.env.JWT_SECRET;
 
   // Try to verify with backend secret first
   require('jsonwebtoken').verify(token, jwtSecret, (err, user) => {

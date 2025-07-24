@@ -2,7 +2,6 @@ const express = require('express');
 const { z } = require('zod');
 const { authenticateToken } = require('../middleware/auth');
 const { validateRequest } = require('../middleware/validation');
-const { getInvoices, getTransactions } = require('../services/openBookService');
 const logger = require('../utils/logger');
 
 const router = express.Router();

@@ -42,12 +42,12 @@ export default function XeroCallback() {
         }
 
         // Xero OAuth credentials
-        const client_id = '7D0E365D876F432AB107DD9404E0ABB2';
-        const client_secret = '2sz3XRQH4Lhwv6Exj8UWKta6kX0K4c1U2KHI1hScOhdTTRpC';
+        const client_id = process.env.VITE_XERO_CLIENT_ID;
+        const client_secret = process.env.VITE_XERO_CLIENT_SECRET;
 
         // Try different possible redirect URIs that might have been used initially
         const possibleRedirectUris = [
-          'http://localhost:5173/xero/callback',
+          'https://invoice-manager-six.vercel.app/xero/callback',
         ];
 
         // First, try to make the request through your backend to avoid CORS
