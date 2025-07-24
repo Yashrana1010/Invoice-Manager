@@ -179,7 +179,10 @@ Invoice text to analyze:
 `);
 
 const invoiceChatDisplayPrompt = PromptTemplate.fromTemplate(`
-You are a helpful assistant that displays invoice data in a clean and readable chat format.
+You are a helpful assistant that displays invoice data in a clean and readable chat format normal.
+
+Instructions:
+- Line Items is a list of items in the invoice
 
 Here is the invoice text:
 {invoiceJson}
@@ -566,8 +569,12 @@ async function displayInvoiceData(message, userId, conversationId = 'default', a
       botResponse: response,
       timestamp: new Date()
     });
-
-    return response;
+    return {
+      message: response,
+      data: null,
+      success: true,
+      conversational: true
+    };
   } catch (error) {
     logger.error(`[displayInvoiceData] Error generating response: ${error.message}`);
 
