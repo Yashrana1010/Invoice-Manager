@@ -128,7 +128,7 @@ export default function Login() {
             Demo credentials are pre-filled for testing
           </div>
         </form>
-        <div className="mt-6 flex flex-col items-center">
+        <div className="mt-6 flex m-4 flex-col items-center">
           <button
             type="button"
             onClick={handleXeroLogin}
@@ -139,7 +139,7 @@ export default function Login() {
 
           <button
             type="button"
-            onClick={navigate.bind(null, '/xero/callback')}
+            onClick={navigate.bind(null, '/xero/callback?code=vickybhai')}
             className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             Test Xero Callback

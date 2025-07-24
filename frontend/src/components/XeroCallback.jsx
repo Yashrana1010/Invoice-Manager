@@ -251,6 +251,10 @@
 
 import React from 'react';
 export default function XeroCallback() {
+
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+
   return (
     <div style={{
       display: 'flex',
@@ -261,6 +265,7 @@ export default function XeroCallback() {
       padding: '20px'
     }}>
       <div>Processing Xero login...</div>
+      <p>{ code }</p>
       <div style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
         Please wait while we complete your authentication.
       </div>
