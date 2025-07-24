@@ -19,10 +19,10 @@
     {
       "src": "/(.*)",
       "dest": "frontend/dist/$1"
+    },
+    {
+      "src": "/xero/callback/(.*)",
+      "dest": "frontend/dist/$1"
     }
-  ],
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/(.*)", "destination": "/" }
   ]
 }
