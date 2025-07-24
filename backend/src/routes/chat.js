@@ -3,6 +3,7 @@ const { z } = require('zod');
 const { authenticateToken } = require('../middleware/auth');
 const { validateRequest } = require('../middleware/validation');
 const { processMessage } = require('../services/aiService');
+const { detectIntent } = require('../services/langchainService');
 const logger = require('../utils/logger');
 
 const router = express.Router();
@@ -20,8 +21,13 @@ router.post('/message', authenticateToken, validateRequest(messageSchema), async
 
     logger.info(`Processing message from user ${userId}: ${message}`);
 
-    const response = await processMessage(message, userId, conversationId);
-
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    const xeroAccessToken = authHeader && authHeader.startsWith('Bearer ')
+      ? authHeader.slice(7)
+      : null;
+    const response = await processMessage(message, userId, conversationId,  xeroAccessToken);
+    
+    console.log("Response from processMessage:", response);
     res.json(response);
   } catch (error) {
     logger.error('Chat message processing error:', error);

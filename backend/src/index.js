@@ -48,7 +48,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Xero OAuth2 config
-const XERO_CLIENT_ID = process.env.XERO_CLIENT_ID || '118A2DE28C17464EB5AEEE033FDD7DB3';
+const XERO_CLIENT_ID = process.env.XERO_CLIENT_ID || '7D0E365D876F432AB107DD9404E0ABB2';
 const XERO_CLIENT_SECRET = process.env.XERO_CLIENT_SECRET || 'V7j5pSnZcHP49b8sZvvYmOz11ppmOOZyMgAvuagWua-ZDJRC';
 const XERO_CALLBACK_URL = process.env.XERO_CALLBACK_URL || 'http://localhost:3000/api/auth/xero/callback';
 

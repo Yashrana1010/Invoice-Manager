@@ -3,6 +3,7 @@ const { HumanMessage, SystemMessage, AIMessage } = require('@langchain/core/mess
 const { PromptTemplate } = require('@langchain/core/prompts');
 const { StringOutputParser } = require('@langchain/core/output_parsers');
 const { RunnableSequence } = require('@langchain/core/runnables');
+const {getInvoices} = require('./xeroService');
 const logger = require('../utils/logger');
 
 // Initialize Gemini model with correct configuration
@@ -72,6 +73,7 @@ Possible intents:
 - RECORD_TRANSACTION: User wants to record a transaction (keywords: transaction, expense, income, record, spent, received, paid)
 - GENERATE_BALANCE_SHEET: User wants to see a balance sheet (keywords: balance, sheet, summary, report, overview, total)
 - UPLOAD_DOCUMENT: User wants to upload a document for processing (keywords: upload, document, file, process, analyze)
+- DISPLAY_INVOICE: User wants to get an invoice from database by invoiceId(keywords: show invoice , show bill, get invoice, ) 
 - GENERAL_INQUIRY: General questions about finance, help requests, or unclear intent
 - GENERAL_INQUIRY: User asks how to use the system or general questions (keywords: how, what, explain, help, guide)
 - GeNERAL_INQUIRY: User asks about features or capabilities (keywords: features, capabilities, functions, abilities)
@@ -99,6 +101,7 @@ Examples:
 - "I spent $50 on office supplies" -> RECORD_TRANSACTION
 - "Show me my balance sheet" -> GENERATE_BALANCE_SHEET
 - "How do I create invoices?" -> GENERAL_INQUIRY
+- "get invoice with invoiceId ab78dbe6-b3cf-4420-986d-24a041e3ec0f" -> DISPLAY_INVOICE
 
 User message: {message}
 
@@ -113,6 +116,8 @@ You are a helpful and friendly AI assistant for an invoice management system. Yo
 ✅ Recording transactions: "I spent $[amount] on [description]"
 ✅ Viewing balance sheets: "Show me my balance sheet"
 ✅ Uploading documents: Users can upload invoice documents for automatic data extraction
+✅ Show invoice: "get invoice with invoiceId ab78dbe6-b3cf-4420-986d-24a041e3ec0f"
+
 
 Guidelines:
 - Be conversational, helpful, and engaging
@@ -176,6 +181,43 @@ Invoice text to analyze:
 {documentText}
 `);
 
+
+const invoiceChatDisplayPrompt = PromptTemplate.fromTemplate(`
+You are a helpful assistant that displays invoice data in a clean and readable chat format.
+
+Here is the invoice text:
+{invoiceJson}
+
+`);
+
+
+const extractIdPrompt = PromptTemplate.fromTemplate(`
+You are an intelligent assistant designed to extract ID values from user messages.
+
+Analyze the message below and extract a valid ID if one is present.
+
+Message:
+"{userMessage}"
+
+Instructions:
+- Extract only the ID (e.g., a UUID, numeric ID, alphanumeric ID, etc.)
+- Do NOT include any text before or after the ID
+- If multiple IDs are present, return only the first one found
+- If no ID is found, return null
+- Do NOT return anything other than the ID(s) or null
+
+Examples:
+Input: "Can you fetch details for invoice ID INV-0001?"
+Output: "INV-0001"
+
+Input: "Here are the IDs: 123456, 987654"
+Output: ["123456", "987654"]
+
+Input: "Hey there!"
+Output: null
+`);
+
+
 // Create LangChain chains
 const intentChain = RunnableSequence.from([
   intentDetectionPrompt,
@@ -191,6 +233,18 @@ const conversationChain = RunnableSequence.from([
 
 const invoiceExtractionChain = RunnableSequence.from([
   invoiceExtractionPrompt,
+  model,
+  new StringOutputParser(),
+]);
+
+const InvoiceDisplayChain = RunnableSequence.from([
+  invoiceChatDisplayPrompt,
+  model,
+  new StringOutputParser(),
+]);
+
+const extractIdChain = RunnableSequence.from([
+  extractIdPrompt,
   model,
   new StringOutputParser(),
 ]);
@@ -519,6 +573,60 @@ function isModelAvailable() {
   return modelConnectionWorking !== false;
 }
 
+async function displayInvoiceData(message, userId, conversationId = 'default', accessToken) {
+  try {
+    logger.info(`[displayInvoiceData] Generating display invoice response for: "${message}"`);
+
+    // Check if model connection is working
+    if (modelConnectionWorking === false) {
+      logger.info('[displayInvoiceData] Using fallback response due to model connection issues');
+      return generateFallbackResponse(message);
+    }
+    const context = getConversationContext(userId, conversationId);
+
+    const invoiceId = await extractIdChain.invoke({
+      userMessage: message,
+      context: context
+    });
+    console.log("Extracted invoiceId:", invoiceId);
+
+    const documentText = await getInvoices(invoiceId, accessToken);
+    console.log("Fetched invoice data:", documentText);
+
+    // Get conversation context
+
+    const response = await InvoiceDisplayChain.invoke({
+      invoiceJson: JSON.stringify(documentText),
+      context: context
+    });
+
+    // Store in conversation memory
+    addToConversationMemory(userId, conversationId, {
+      type: 'conversation',
+      userMessage: message,
+      botResponse: response,
+      timestamp: new Date()
+    });
+
+    return response;
+  } catch (error) {
+    logger.error(`[displayInvoiceData] Error generating response: ${error.message}`);
+
+    // Update connection status if it's a model error
+    if (error.message.includes('GoogleGenerativeAI Error') || error.message.includes('404 Not Found')) {
+      modelConnectionWorking = false;
+      logger.warn('[displayInvoiceData] Marking Gemini model as unavailable due to API error');
+    }
+
+    // Fallback response
+    return generateFallbackResponse(message);
+  }
+}
+function generateFallbackResponse(message) {
+  return "Sorry, I couldn't process your request at this time. Please try again later.";
+}
+
+
 module.exports = {
   detectIntent,
   generateConversationalResponse,
@@ -529,5 +637,6 @@ module.exports = {
   model,
   setPendingExtractedData,
   getPendingExtractedData,
-  clearPendingExtractedData
+  clearPendingExtractedData,
+  displayInvoiceData
 };

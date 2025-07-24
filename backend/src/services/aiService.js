@@ -1,9 +1,9 @@
-const { detectIntent, generateConversationalResponse, getPendingExtractedData, clearPendingExtractedData } = require('./langchainService');
+const { detectIntent, generateConversationalResponse, getPendingExtractedData, clearPendingExtractedData, displayInvoiceData } = require('./langchainService');
 const { extractFinancialData } = require('./extractionService');
 const { createInvoice, recordTransaction, generateBalanceSheet } = require('./openBookService');
 const logger = require('../utils/logger');
 
-async function processMessage(message, userId, conversationId) {
+async function processMessage(message, userId, conversationId, accessToken) {
   logger.info(`Processing message: "${message}" for user ${userId}`);
 
   // Step 1: Detect intent using LangChain with Gemini
@@ -11,7 +11,8 @@ async function processMessage(message, userId, conversationId) {
 
   logger.info(`Detected intent: ${intent.intent} with confidence: ${intent.confidence}`);
 
-  // Step 2: Extract financial data using regex (as backup)
+  if(!intent || intent.intent !== 'DISPLAY_INVOICE') 
+  {// Step 2: Extract financial data using regex (as backup)
   const extractedData = extractFinancialData(message);
 
   // Step 3: Merge AI entities with regex extraction (prioritize AI entities)
@@ -33,9 +34,9 @@ async function processMessage(message, userId, conversationId) {
         ...mergedData // user message takes precedence if present
       };
     }
-  }
+    logger.info(`Merged data: ${JSON.stringify(mergedData)}`);
+  }};
 
-  logger.info(`Merged data: ${JSON.stringify(mergedData)}`);
 
   // Step 5: Process based on intent
   let response;
@@ -51,6 +52,10 @@ async function processMessage(message, userId, conversationId) {
       break;
     case 'GENERATE_BALANCE_SHEET':
       response = await handleBalanceSheetGeneration(userId, conversationId);
+      break;
+    case 'DISPLAY_INVOICE':
+      // Use LangChain to generate conversational response for invoice display
+      response = await displayInvoiceData(message, userId, conversationId,  accessToken);
       break;
     default:
       response = await handleGeneralInquiry(message, userId, conversationId);

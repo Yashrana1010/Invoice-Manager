@@ -2,6 +2,10 @@ const axios = require('axios');
 const logger = require('../utils/logger');
 const {xeroInvoiceSchema, mapToXeroInvoiceSchema} = require('./invoiceSchema');
 
+
+
+const XERO_TENANT_ID = process.env.XERO_TENANT_ID || "c8b88426-261c-409a-8258-d9c3fb365d76";
+
 async function createInvoice(invoiceData, accessToken, xeroTenantId) {
   try {
     console.log("Creating invoice in Xero...");
@@ -35,39 +39,23 @@ async function createInvoice(invoiceData, accessToken, xeroTenantId) {
   }
 }
 
-async function getInvoices(){
+async function getInvoices(invoiceId, accessToken){
   try { 
-    console.log("Getting invoice in Xero...");
-    // Validate input
-    // const validatedData = xeroInvoiceSchema.parse(invoiceData);
-
-    const response = await axios.get("https://api.xero.com/api.xro/2.0/Invoices", {
+    const response = await axios.get(`https://api.xero.com/api.xro/2.0/Invoices/${invoiceId}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'xero-tenant-id': xeroTenantId, // Required by Xero for all API calls
+        'xero-tenant-id': XERO_TENANT_ID,
       }
     });
 
-    console.log("Invoices fetched successfully:", response);
-    if (response.status !== 200) {
-      throw new Error(`Failed to create invoice: ${response.statusText}`);
-    }
- 
-    logger.info(`Invoice created successfully: ${response.data?.Invoices?.[0]?.InvoiceID || 'No ID found'}`);
-    return response;  
-  } catch (error) {
-    if (error.name === 'ZodError') {
-      logger.error('Invoice validation error:', error.errors);
-      throw new Error('Invalid invoice data');
+    if (response.status !== 200 || !response.data || !response.data.Invoices || !response.data.Invoices[0]) {
+      throw new Error(`Invoice not found or API error: ${response.statusText}`);
     }
 
-    logger.error('Xero API error:', error.message);
-    return {
-      status: 500,
-      message: 'Failed to create invoice',
-      error: error
-    };
+    return response.data.Invoices[0];
+  } catch (error) {
+    logger.error('Xero API error:', error);
+    throw error;
   }
 }
 
