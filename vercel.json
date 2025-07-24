@@ -17,11 +17,11 @@
       "dest": "backend/src/index.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "frontend/dist/$1"
+      "src": "/xero/callback",
+      "dest": "backend/src/index.js"
     },
     {
-      "src": "/xero/callback/(.*)",
+      "src": "/(.*)",
       "dest": "frontend/dist/$1"
     }
   ]
